@@ -1,0 +1,41 @@
+1. Vaadin View should contain @SpringComponent annotation. 
+   Else you will not able to use @Autowire annotation to include other views into current view.
+   
+2. Vaadin View should contain @UIScope annotation.
+   Else you will not able to use ComboBox, DatePicker component in your views.
+   
+3. Dont use autowired object inside vaadin view constructor.
+   In this approach, It will always be null.
+   Instead create some method and use autowired object inside that method. Use @PostConstruct annotation with that method.
+
+4. Added Extra add on jar for file download - file-download-wrapper-3.0.1.jar
+   Maven for this jar is not working thats why adding it manaully   
+   
+5. Grid Index(1 Based)
+   		grid.addColumn(item -> "").setKey("rowIndex").setHeader("S.No").setAutoWidth(true);// S.No
+		// S.No Logic
+		grid.addAttachListener(event -> {
+		    Column<Invoice> b = grid.getColumnByKey("rowIndex");
+		    b.getElement().executeJs(
+		            "this.renderer = function(root, column, rowData) {root.textContent = rowData.index + 1}"
+		    );
+		});     
+
+6.	org.hibernate.loader.MultipleBagFetchException
+		As the exception says to you, you can't fetch two related collections or bags simultaneously. 
+		A quick solution would be to remove the FetchType.EAGER from one collection and force the fetching 
+		of that collection explicitly calling the collection objects.
+
+7. Form Layout Single Column
+	You can use setResponsiveSteps in Java like this:
+  	layout.setResponsiveSteps(new ResponsiveStep("0", 1, LabelsPosition.TOP),
+    new ResponsiveStep("600px", 1, LabelsPosition.ASIDE));
+
+	The example above specifies breakpoint at 600px, with the label to the side. At resolutions lower than 600px, the label will be at the top. In both cases there is only 1 column. The example below will show 2 columns if width is >= 900px.
+  	layout.setResponsiveSteps(new ResponsiveStep("0", 1, LabelsPosition.TOP),
+    new ResponsiveStep("900px", 2, LabelsPosition.ASIDE));
+
+	If you want a row to take up two columns, you can set the colspan directly on the element:
+  	formItem.getElement().setAttribute("colspan", "2");	
+  	
+8.  	
