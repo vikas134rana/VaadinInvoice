@@ -15,10 +15,13 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 
+import org.springframework.stereotype.Component;
+
 import com.vikas.vaadindemo.entity.enums.InvoiceStatus;
 import com.vikas.vaadindemo.util.InvoiceUtils;
 
 @Entity
+@Component
 public class Invoice {
 
 	@Column
@@ -75,6 +78,12 @@ public class Invoice {
 
 	@Column
 	private String transporterName;
+
+	@OneToOne(mappedBy = "invoice", cascade = CascadeType.ALL)
+	private Export export;
+
+	@Column
+	private String remarks;
 
 	@OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
 	private List<InvoiceItem> invoiceItems;
@@ -241,6 +250,22 @@ public class Invoice {
 		this.transporterName = transporterName;
 	}
 
+	public Export getExport() {
+		return export;
+	}
+
+	public void setExport(Export export) {
+		this.export = export;
+	}
+
+	public String getRemarks() {
+		return remarks;
+	}
+
+	public void setRemarks(String remarks) {
+		this.remarks = remarks;
+	}
+
 	@Override
 	public String toString() {
 		return "Invoice [id=" + id + ", invoiceNumber=" + invoiceNumber + ", creationDate=" + creationDate + ", type=" + type + ", seller="
@@ -248,7 +273,8 @@ public class Invoice {
 				+ ", totalQuantity=" + totalQuantity + ", totalNetAmount=" + totalNetAmount + ", totalCgstAmount=" + totalCgstAmount + ", totalSgstAmount="
 				+ totalSgstAmount + ", totalIgstAmount=" + totalIgstAmount + ", totalAmount=" + totalAmount + ", arDocNumber=" + arDocNumber + ", apDocNumber="
 				+ apDocNumber + ", vehicleNumber=" + vehicleNumber + ", transporterName=" + transporterName + ", invoiceItemsCount="
-				+ (invoiceItems != null ? invoiceItems.size() : 0) + ", invoicePdf=" + (invoicePdf != null ? invoicePdf.getId() : null) + "]";
+				+ (invoiceItems != null ? invoiceItems.size() : 0) + ", invoicePdf=" + (invoicePdf != null ? invoicePdf.getId() : null) + ", export="
+				+ (export != null ? export.getId() : null) + ", remarks=" + remarks + "]";
 	}
 
 }

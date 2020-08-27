@@ -1,4 +1,4 @@
-package com.vikas.vaadindemo.ui;
+package com.vikas.vaadindemo.ui.invoiceprinting;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -16,7 +16,6 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
-import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.formlayout.FormLayout.ResponsiveStep;
 import com.vaadin.flow.component.grid.Grid;
@@ -24,7 +23,6 @@ import com.vaadin.flow.component.grid.Grid.Column;
 import com.vaadin.flow.component.grid.Grid.SelectionMode;
 import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.Anchor;
-import com.vaadin.flow.component.html.Label;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.page.Page;
@@ -50,6 +48,9 @@ public class InvoicePrintingView extends VerticalLayout {
 	private static final long serialVersionUID = 1L;
 
 	@Autowired
+	ModifyInvoiceDialog modifyDialog;
+
+	@Autowired
 	InvoiceService invoiceService;
 
 	@Autowired
@@ -72,6 +73,10 @@ public class InvoicePrintingView extends VerticalLayout {
 	private List<Invoice> invoices = new ArrayList<>();
 
 	private static final String downloadId = "downloadId";
+
+	public Grid<Invoice> getGrid() {
+		return grid;
+	}
 
 	@PostConstruct
 	public void init() {
@@ -108,7 +113,7 @@ public class InvoicePrintingView extends VerticalLayout {
 		searchEle = new Button("Search");
 		searchEle.addClickListener(click -> {
 			invoices = getInvoicesUsingForm();
-			grid.setItems(invoices);
+			getGrid().setItems(invoices);
 		});
 
 		formLayout = new FormLayout();
@@ -128,35 +133,67 @@ public class InvoicePrintingView extends VerticalLayout {
 
 	private void addInvoicesGrid() {
 		grid = new Grid<>(Invoice.class);
-		grid.setItems(invoices);
-		grid.setColumns(); // if not used grid Column will contain all data present in Invoice class
-		grid.addColumn(item -> "").setKey("rowIndex").setHeader("S.No").setAutoWidth(true);// S.No
+		getGrid().setItems(invoices);
+		getGrid().setColumns(); // if not used grid Column will contain all data present in Invoice class
+		getGrid().addColumn(item -> "").setKey("rowIndex").setHeader("S.No").setAutoWidth(true);// S.No
 		// S.No Logic
-		grid.addAttachListener(event -> {
-			Column<Invoice> serialNoColumn = grid.getColumnByKey("rowIndex");
+		getGrid().addAttachListener(event -> {
+			Column<Invoice> serialNoColumn = getGrid().getColumnByKey("rowIndex");
 			serialNoColumn.getElement().executeJs("this.renderer = function(root, column, rowData) {root.textContent = rowData.index + 1}");
 		});
-		grid.addColumn(i -> i.getInvoiceNumber()).setHeader("Invoice Number").setAutoWidth(true); // InvoiceNumber
-		grid.addColumn(i -> i.getStatusCode()).setHeader("Status").setAutoWidth(true); // Status
-		grid.addColumn(i -> i.getCreationDate()).setHeader("Creation Date").setAutoWidth(true); // CreationDate
-		grid.addColumn(i -> i.getSeller().getAddress().getName()).setHeader("Seller"); // Seller
-		grid.addColumn(i -> i.getBuyer().getAddress().getName()).setHeader("Buyer"); // Buyer
-		grid.addColumn(i -> i.getArDocNumber()).setHeader("AR Doc Number").setAutoWidth(true); // AR Doc Number
-		grid.addColumn(i -> i.getApDocNumber()).setHeader("AP Doc Number").setAutoWidth(true); // AP Doc Number
-		grid.addColumn(i -> i.getTotalAmount()).setHeader("Total Amount").setAutoWidth(true); // Total Amount
-		grid.addComponentColumn(invoice -> {
+		getGrid().addColumn(i -> i.getInvoiceNumber()).setHeader("Invoice Number").setAutoWidth(true); // InvoiceNumber
+		getGrid().addColumn(i -> i.getStatusCode()).setHeader("Status").setAutoWidth(true); // Status
+		getGrid().addColumn(i -> i.getCreationDate()).setHeader("Creation Date").setAutoWidth(true); // CreationDate
+		getGrid().addColumn(i -> i.getSeller().getAddress().getName()).setHeader("Seller"); // Seller
+		getGrid().addColumn(i -> i.getBuyer().getAddress().getName()).setHeader("Buyer"); // Buyer
+		getGrid().addColumn(i -> i.getArDocNumber()).setHeader("AR Doc Number").setAutoWidth(true); // AR Doc Number
+		getGrid().addColumn(i -> i.getApDocNumber()).setHeader("AP Doc Number").setAutoWidth(true); // AP Doc Number
+		getGrid().addColumn(i -> i.getTotalAmount()).setHeader("Total Amount").setAutoWidth(true); // Total Amount
+		getGrid().addComponentColumn(invoice -> {
 			return actionButtons(invoice);
 		}).setAutoWidth(true).setHeader("Actions"); // Action
 
-		grid.setSelectionMode(SelectionMode.SINGLE);
-		grid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
-		grid.setHeight("700px");
+		getGrid().setSelectionMode(SelectionMode.SINGLE);
+		getGrid().addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
+		getGrid().setHeight("700px");
 
 		hiddenDownloadEle = new Anchor();
 		hiddenDownloadEle.setId(downloadId);
 
-		add(grid);
+		add(getGrid());
 		add(hiddenDownloadEle);
+		add(modifyDialog);
+	}
+
+	private Component actionButtons(Invoice invoice) {
+		HorizontalLayout layout = new HorizontalLayout();
+
+		Button downloadEle = new Button("Download");
+		Button modifyEle = new Button("Modify");
+		Button cancelEle = new Button("Cancel");
+
+		downloadEle.addClickListener(click -> {
+			byte[] pdfData = invoice.getInvoicePdf().getPdfData();
+			downloadInvoice(pdfData, invoice);
+		});
+
+		modifyEle.addClickListener(click -> {
+			modifyInvoice(invoice);
+		});
+
+		cancelEle.addClickListener(click -> {
+			try {
+				cancelInvoice(invoice);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
+
+		layout.add(downloadEle);
+		layout.add(modifyEle);
+		layout.add(cancelEle);
+
+		return layout;
 	}
 
 	@SuppressWarnings("deprecation")
@@ -175,10 +212,10 @@ public class InvoicePrintingView extends VerticalLayout {
 			InvoiceBuilder invoiceBuilder = InvoiceBuilderFactory.getInvoiceBuilder(invoice);
 			byte[] pdfData = invoiceBuilder.cancelInvoicePdf();
 			invoice.getInvoicePdf().setPdfData(pdfData);
-			invoice.setStatusCode(InvoiceStatus.CANCELLED);
+			invoice.setStatusCode(InvoiceStatus.CANCELED);
 
 			invoiceService.save(invoice); // update pdfdata in InvoicePdf table
-			grid.getDataProvider().refreshAll();
+			getGrid().getDataProvider().refreshAll();
 			downloadInvoice(pdfData, invoice);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -186,53 +223,9 @@ public class InvoicePrintingView extends VerticalLayout {
 		}
 	}
 
-	private void modifyInvoice() {
-		Dialog dialog = new Dialog();
-		dialog.add(new Label("Modify feature is not implemented yet"));
-
-		dialog.setWidth("400px");
-		dialog.setHeight("150px");
-
-		Button closeButton = new Button("Close");
-
-		dialog.add(closeButton);
-
-		closeButton.addClickListener(click -> {
-			dialog.close();
-		});
-
-		dialog.open();
-	}
-
-	private Component actionButtons(Invoice invoice) {
-		HorizontalLayout layout = new HorizontalLayout();
-
-		Button downloadEle = new Button("Download");
-		Button modifyEle = new Button("Modify");
-		Button cancelEle = new Button("Cancel");
-
-		downloadEle.addClickListener(click -> {
-			byte[] pdfData = invoice.getInvoicePdf().getPdfData();
-			downloadInvoice(pdfData, invoice);
-		});
-
-		modifyEle.addClickListener(click -> {
-			modifyInvoice();
-		});
-
-		cancelEle.addClickListener(click -> {
-			try {
-				cancelInvoice(invoice);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		});
-
-		layout.add(downloadEle);
-		layout.add(modifyEle);
-		layout.add(cancelEle);
-
-		return layout;
+	private void modifyInvoice(Invoice invoice) {
+		modifyDialog.updateForm(invoice);
+		modifyDialog.open();
 	}
 
 	private List<Invoice> getInvoicesUsingForm() {
@@ -249,4 +242,5 @@ public class InvoicePrintingView extends VerticalLayout {
 		invoices.forEach(i -> System.out.println(i));
 		return invoices;
 	}
+
 }

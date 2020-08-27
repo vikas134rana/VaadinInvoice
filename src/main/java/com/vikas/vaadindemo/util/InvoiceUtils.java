@@ -24,19 +24,6 @@ public class InvoiceUtils {
 		return invoiceTypeMap;
 	}
 
-	public static List<String> getItemUnits() {
-		return Arrays.asList("PCS", "GMS", "KGS", "NOS", "MTR", "BOX", "ROL", "SET", "PAC", "OTH");
-	}
-
-	public static List<String> getCurrencies() {
-		return Arrays.asList("INR", "EURO", "Dollar");
-	}
-
-	public static List<String> getIgstTypes() {
-		return Arrays.asList("Supply meant for export with payment of IGST",
-				"Supply meant for export under bond or letter of undertaking without payment of IGST");
-	}
-
 	public static int invoiceTypeInt(String invoiceTypeValue) {
 
 		Map<Integer, String> invoiceTypeMap = invoiceTypeMap();
@@ -88,6 +75,32 @@ public class InvoiceUtils {
 		Map<Integer, String> invoiceTypeMap = invoiceTypeMap();
 		String invoiceTypeValue = invoiceTypeMap.containsKey(invoiceType) ? invoiceTypeMap.get(invoiceType) : null;
 		return invoiceTypeValue;
+	}
+
+	public static List<String> getItemUnits() {
+		return Arrays.asList("PCS", "GMS", "KGS", "NOS", "MTR", "BOX", "ROL", "SET", "PAC", "OTH");
+	}
+
+	public static List<String> getCurrencies() {
+		return Arrays.asList("INR", "EURO", "Dollar");
+	}
+
+	public static Map<Integer, String> getIgstTypeMap() {
+		Map<Integer, String> igstTypeMap = new LinkedHashMap<>();
+		igstTypeMap.put(1, "Supply meant for export with payment of IGST");
+		igstTypeMap.put(2, "Supply meant for export under bond or letter of undertaking without payment of IGST");
+		return igstTypeMap;
+	}
+
+	public static int getIgstType(String igstTypeValue) {
+		Map<Integer, String> invoiceTypeMap = getIgstTypeMap();
+
+		for (Entry<Integer, String> entry : invoiceTypeMap.entrySet()) {
+			if (entry.getValue().equals(igstTypeValue)) {
+				return entry.getKey();
+			}
+		}
+		return 0;
 	}
 
 	public static boolean isIGST(Seller seller, Buyer buyer) {

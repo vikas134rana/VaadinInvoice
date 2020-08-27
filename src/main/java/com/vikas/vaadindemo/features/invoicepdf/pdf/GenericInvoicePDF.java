@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.util.FileCopyUtils;
 
 import com.itextpdf.io.font.constants.StandardFonts;
 import com.itextpdf.io.image.ImageData;
@@ -85,7 +86,7 @@ public class GenericInvoicePDF implements InvoiceStructure, InvoiceBuilder {
 	public byte[] cancelInvoicePdf() throws IOException {
 		System.out.println("Generic cancelInvoicePdf");
 
-		if (invoice.getStatusCode() == InvoiceStatus.CANCELLED) {
+		if (invoice.getStatusCode() == InvoiceStatus.CANCELED) {
 			throw new IllegalStateException("Cannot cancel already cancelled invoice " + invoice.getInvoiceNumber());
 		}
 
@@ -98,7 +99,7 @@ public class GenericInvoicePDF implements InvoiceStructure, InvoiceBuilder {
 		Document doc = new Document(pdfDoc);
 
 		Resource resource = new ClassPathResource("static\\images\\cancel.jpg");
-		ImageData img = ImageDataFactory.create(resource.getFile().getAbsolutePath());
+		ImageData img = ImageDataFactory.create(FileCopyUtils.copyToByteArray(resource.getInputStream()));
 
 		float w = img.getWidth();
 		float h = img.getHeight();
@@ -157,7 +158,7 @@ public class GenericInvoicePDF implements InvoiceStructure, InvoiceBuilder {
 		Resource resource = new ClassPathResource("static\\images\\samsung_logo.png");
 		ImageData imageData = null;
 		try {
-			imageData = ImageDataFactory.create(resource.getFile().getAbsolutePath());
+			imageData = ImageDataFactory.create(FileCopyUtils.copyToByteArray(resource.getInputStream()));
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -300,6 +301,8 @@ public class GenericInvoicePDF implements InvoiceStructure, InvoiceBuilder {
 		for (int i = 0; i < invoiceItems.size(); i++) {
 			InvoiceItem invoiceItem = invoiceItems.get(i);
 			Item item = invoiceItem.getItem();
+			if (invoiceItem.getQuantity() <= 0)
+				continue;
 
 			String srNo = "" + (i + 1);
 			itemTableData.addCell(new Paragraph(srNo)); // SR NO.

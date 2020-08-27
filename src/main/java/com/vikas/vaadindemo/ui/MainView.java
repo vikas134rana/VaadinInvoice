@@ -9,6 +9,12 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
 import com.vikas.vaadindemo.service.SellerService;
+import com.vikas.vaadindemo.ui.common.HeaderComponent;
+import com.vikas.vaadindemo.ui.invoiceentry.InvoiceEntryView;
+import com.vikas.vaadindemo.ui.invoicepricemaintainance.InvoicePriceMaintainancePresenter;
+import com.vikas.vaadindemo.ui.invoicepricemaintainance.InvoicePriceMaintainanceView;
+import com.vikas.vaadindemo.ui.invoiceprinting.InvoicePrintingView;
+import com.vikas.vaadindemo.ui.salesregister.SalesRegisterView;
 
 @Route
 public class MainView extends VerticalLayout {
@@ -19,14 +25,16 @@ public class MainView extends VerticalLayout {
 	SellerService sellerService;
 
 	@Autowired
-	Header header;
+	HeaderComponent header;
 
 	@Autowired
 	InvoicePriceMaintainanceView invoicePriceMaintainanceView;
-	
+	@Autowired
+	InvoicePriceMaintainancePresenter invoicePriceMaintainancePresenter;
+
 	@Autowired
 	InvoiceEntryView invoiceEntryView;
-	
+
 	@Autowired
 	InvoicePrintingView invoicePrintingView;
 
@@ -38,21 +46,26 @@ public class MainView extends VerticalLayout {
 
 		add(header);
 
-		addView(header.invoicePriceMaintainance, invoicePriceMaintainanceView);
-		addView(header.invoiceEntry, invoiceEntryView);
-		addView(header.invoicePrinting, invoicePrintingView);
-		addView(header.salesRegister, salesRegister);
+		addViewOnClick(header.invoicePriceMaintainance, invoicePriceMaintainanceView);
+		addViewOnClick(header.invoiceEntry, invoiceEntryView);
+		addViewOnClick(header.invoicePrinting, invoicePrintingView);
+		addViewOnClick(header.salesRegister, salesRegister);
 
 	}
-	
+
 	// add view when button is clicked
-	public void addView(Button button, Component view) {
-		
+	public void addViewOnClick(Button button, Component view) {
+
 		button.addClickListener(click -> {
 			removeAll();
 			add(header);
-			add(view);
+			addView(view);
 		});
-		
+
+	}
+
+	// add view
+	public void addView(Component view) {
+		add(view);
 	}
 }

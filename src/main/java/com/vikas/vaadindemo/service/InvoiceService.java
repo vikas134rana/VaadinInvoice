@@ -1,6 +1,7 @@
 package com.vikas.vaadindemo.service;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -42,7 +43,7 @@ public class InvoiceService {
 	}
 
 	public List<Invoice> getInvoicesBetweenDate(LocalDate startDate, LocalDate endDate) {
-		return (List<Invoice>) invoiceRepository.getInvoicesBetweenDate(startDate.atStartOfDay(), endDate.atTime(23, 59, 59, 999999999));
+		return (List<Invoice>) invoiceRepository.getInvoicesBetweenDate(startDate.atStartOfDay(), endDate.atTime(LocalTime.MAX));
 	}
 
 	public List<Invoice> searchInvoice(String invoiceNumber, Integer sellerId, Integer buyerId, Integer invoiceType, LocalDate startDate, LocalDate endDate) {

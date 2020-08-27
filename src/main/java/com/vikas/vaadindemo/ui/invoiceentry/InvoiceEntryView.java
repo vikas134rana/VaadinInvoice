@@ -1,6 +1,7 @@
-package com.vikas.vaadindemo.ui;
+package com.vikas.vaadindemo.ui.invoiceentry;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -8,49 +9,63 @@ import java.util.List;
 import javax.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.formlayout.FormLayout.FormItem;
 import com.vaadin.flow.component.formlayout.FormLayout.ResponsiveStep;
 import com.vaadin.flow.component.formlayout.FormLayout.ResponsiveStep.LabelsPosition;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
-import com.vaadin.flow.component.html.H5;
-import com.vaadin.flow.component.html.Label;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
-import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.renderer.TemplateRenderer;
 import com.vaadin.flow.spring.annotation.SpringComponent;
 import com.vaadin.flow.spring.annotation.UIScope;
 import com.vikas.vaadindemo.entity.Buyer;
+import com.vikas.vaadindemo.entity.Export;
 import com.vikas.vaadindemo.entity.Invoice;
 import com.vikas.vaadindemo.entity.InvoiceItem;
 import com.vikas.vaadindemo.entity.InvoicePdf;
 import com.vikas.vaadindemo.entity.ItemPrice;
+import com.vikas.vaadindemo.entity.Port;
 import com.vikas.vaadindemo.entity.Seller;
 import com.vikas.vaadindemo.entity.enums.InvoiceStatus;
 import com.vikas.vaadindemo.features.invoicepdf.InvoiceBuilder;
 import com.vikas.vaadindemo.features.invoicepdf.InvoiceBuilderFactory;
 import com.vikas.vaadindemo.service.BuyerService;
 import com.vikas.vaadindemo.service.InvoiceSeriesService;
+import com.vikas.vaadindemo.service.InvoiceService;
 import com.vikas.vaadindemo.service.ItemPriceService;
 import com.vikas.vaadindemo.service.SellerService;
 import com.vikas.vaadindemo.service.TaxRateService;
+import com.vikas.vaadindemo.ui.common.InvoiceDialog;
+import com.vikas.vaadindemo.ui.invoiceprinting.InvoicePrintingView;
 import com.vikas.vaadindemo.util.InvoiceUtils;
 import com.vikas.vaadindemo.util.Util;
-import com.vikas.vaadindemo.util.VaadinUtils;
 
 @UIScope
 @SpringComponent
 public class InvoiceEntryView extends VerticalLayout {
 
 	private static final long serialVersionUID = 1L;
+
+	@Autowired
+	InvoicePrintingView invoicePrintingView;
+
+	@Autowired
+	AutowireCapableBeanFactory autowireCapableBeanFactory;
+
+	@Autowired
+	InvoiceService invoiceService;
 
 	@Autowired
 	SellerService sellerService;
@@ -67,40 +82,32 @@ public class InvoiceEntryView extends VerticalLayout {
 	@Autowired
 	InvoiceSeriesService invoiceSeriesService;
 
+	@Autowired
+	private BuyerDetailFormComponent buyerDetailFormComponent;
+
+	@Autowired
+	private BuyerAddressComponent buyerAddressComponent;
+
+	@Autowired
+	private ExportFormComponent exportFormComponent;
+
 	private FormLayout formLayout;
 	private ComboBox<Seller> sellerEle;
 	private RadioButtonGroup<String> invoiceTypeEle;
 	private HorizontalLayout buyerAndExportLayout;
 	private VerticalLayout buyerDetailLayout;
-	private FormLayout buyerDetailFormLayout;
-	private ComboBox<Buyer> buyerEle;
-	private TextField remarksEle;
-	private TextField vehicleNumberEle;
-	private TextField transporterNameEle;
 	private VerticalLayout buyerAddressLayout;
-	private FormLayout buyerAddressFormLayout;
-	private Label buyerNameEle;
-	private Label buyerAddressEle;
-	private Label buyerPincodeEle;
-	private Label buyerStateEle;
-	private Label buyerCountryEle;
-	private Label buyerGstinEle;
 	private VerticalLayout exportLayout;
-	private FormLayout exportFormLayout;
-	private Select<String> currencyEle;
-	private NumberField exchangeRateEle;
-	private Select<String> portCodeEle;
-	private RadioButtonGroup<String> igstTypeEle;
 	private Grid<InvoiceItem> itemGrid;
 	private Button saveEle;
-
+	private Button resetEle;
 	private NumberField quantityEle;
-
 	private List<InvoiceItem> items = new ArrayList<InvoiceItem>();
+
+	private Export export;
 
 	@PostConstruct
 	public void init() {
-//		add(new Text("InvoiceEntryView not implemented yet"));
 
 		sellerEle = new ComboBox<>();
 		sellerEle.setItems(sellerService.getAllSellers());
@@ -110,92 +117,36 @@ public class InvoiceEntryView extends VerticalLayout {
 		invoiceTypeEle = new RadioButtonGroup<String>();
 		Collection<String> invoiceTypes = InvoiceUtils.invoiceTypeMap().values();
 		invoiceTypeEle.setItems(invoiceTypes);
+
 		invoiceTypeEle.addValueChangeListener(listener -> {
 			String invoiceTypeStr = invoiceTypeEle.getValue();
 			int invoiceType = InvoiceUtils.invoiceTypeInt(invoiceTypeStr);
+
+			setBuyerDetailFormItem(invoiceType);
+
 			if (invoiceType == 4) {
-				exportLayout.add(exportFormLayout);
+				autowireCapableBeanFactory.autowireBean(ExportFormComponent.class); // create new object through autowire
+				exportLayout.add(exportFormComponent);
 			} else {
 				exportLayout.removeAll();
 			}
 		});
 
-		buyerEle = new ComboBox<>();
-		buyerEle.setItems(buyerService.getAllBuyers());
-		buyerEle.setItemLabelGenerator(b -> b.getAddress().getName());
-		buyerEle.addValueChangeListener(listener -> {
-			Buyer buyer = buyerEle.getValue();
-
-			if (buyer != null) {
-				buyerNameEle.setText(buyer.getAddress().getName());
-				buyerAddressEle.setText(buyer.getAddress().getAddressDetail());
-				buyerPincodeEle.setText(buyer.getAddress().getPincode());
-				buyerStateEle.setText(buyer.getAddress().getState().getName());
-				buyerCountryEle.setText(buyer.getAddress().getCountry().getName());
-				buyerGstinEle.setText(buyer.getAddress().getGstin());
-			} else {
-				buyerNameEle.setText(null);
-				buyerAddressEle.setText(null);
-				buyerPincodeEle.setText(null);
-				buyerStateEle.setText(null);
-				buyerCountryEle.setText(null);
-				buyerGstinEle.setText(null);
-			}
-		});
-
-		remarksEle = new TextField();
-		vehicleNumberEle = new TextField();
-		transporterNameEle = new TextField();
+		buyerDetailFormComponent.getBuyerEle().addValueChangeListener(listener -> setBuyerAddressValues(listener.getValue()));
 
 		buyerDetailLayout = new VerticalLayout();
-		buyerDetailLayout.setWidth("80%");
-		buyerDetailFormLayout = new FormLayout();
-		buyerDetailFormLayout.getStyle().set("border", "1px solid black");
-		buyerDetailFormLayout.add(new H5("Buyer Detail"));
-		buyerDetailFormLayout.addFormItem(buyerEle, "Buyer");
-		buyerDetailFormLayout.addFormItem(remarksEle, "Remarks");
-		buyerDetailFormLayout.addFormItem(vehicleNumberEle, "Vehicle Number");
-		buyerDetailFormLayout.addFormItem(transporterNameEle, "Transporter Name");
-		VaadinUtils.setFormLabelWidth(buyerDetailFormLayout, "150px");
-		buyerDetailLayout.add(buyerDetailFormLayout);
-
-		buyerNameEle = new Label();
-		buyerAddressEle = new Label();
-		buyerPincodeEle = new Label();
-		buyerStateEle = new Label();
-		buyerCountryEle = new Label();
-		buyerGstinEle = new Label();
+		buyerDetailLayout.setWidth("50%");
+		buyerDetailLayout.add(buyerDetailFormComponent);
+		buyerDetailLayout.getStyle().set("border-right", "1px solid black");
 
 		buyerAddressLayout = new VerticalLayout();
-		buyerAddressLayout.setHeightFull();
-		buyerAddressFormLayout = new FormLayout();
-		buyerAddressFormLayout.getStyle().set("border", "1px solid black");
-		buyerAddressFormLayout.add(new H5("Buyer Address"));
-		buyerAddressFormLayout.addFormItem(buyerNameEle, "Name");
-		buyerAddressFormLayout.addFormItem(buyerAddressEle, "Address");
-		buyerAddressFormLayout.addFormItem(buyerPincodeEle, "Pincode");
-		buyerAddressFormLayout.addFormItem(buyerStateEle, "State");
-		buyerAddressFormLayout.addFormItem(buyerCountryEle, "Country");
-		buyerAddressFormLayout.addFormItem(buyerGstinEle, "Gstin");
-		buyerAddressFormLayout.setHeightFull();
-		buyerAddressLayout.add(buyerAddressFormLayout);
-
-		currencyEle = new Select<>();
-		currencyEle.setItems(InvoiceUtils.getCurrencies());
-		exchangeRateEle = new NumberField();
-		portCodeEle = new Select<>();
-		igstTypeEle = new RadioButtonGroup<>();
-		igstTypeEle.setItems(InvoiceUtils.getIgstTypes());
+		buyerAddressLayout.setWidth("70%");
+		buyerAddressLayout.add(buyerAddressComponent);
+		buyerAddressLayout.getStyle().set("border-right", "1px solid black");
 
 		exportLayout = new VerticalLayout();
-		exportLayout.setHeightFull();
-		exportFormLayout = new FormLayout();
-		exportFormLayout.getStyle().set("border", "1px solid black");
-		exportFormLayout.add(new H5("Export"));
-		exportFormLayout.addFormItem(currencyEle, "Currency");
-		exportFormLayout.addFormItem(exchangeRateEle, "Exchange Rate");
-		exportFormLayout.addFormItem(portCodeEle, "Port Code");
-		exportFormLayout.addFormItem(igstTypeEle, "Igst Type");
+		exportLayout.add(new Text(""));
+//		exportLayout.getStyle().set("border", "1px solid black");
 
 		buyerAndExportLayout = new HorizontalLayout();
 		buyerAndExportLayout.getStyle().set("border", "1px solid black");
@@ -239,6 +190,11 @@ public class InvoiceEntryView extends VerticalLayout {
 		itemGrid.setHeight("300px");
 		itemGrid.addThemeVariants(GridVariant.LUMO_COLUMN_BORDERS);
 
+		resetEle = new Button("Reset");
+		resetEle.getStyle().set("margin-right", "20px");
+		resetEle.setMaxWidth("150px");
+		resetEle.addClickListener(click -> reset());
+
 		saveEle = new Button("Save");
 		saveEle.setMaxWidth("150px");
 		saveEle.addClickListener(click -> processForm());
@@ -248,11 +204,58 @@ public class InvoiceEntryView extends VerticalLayout {
 		formLayout.addFormItem(invoiceTypeEle, "Invoice Type");
 		formLayout.add(buyerAndExportLayout);
 		formLayout.add(itemGrid);
+		formLayout.add(resetEle);
 		formLayout.add(saveEle);
 		add(formLayout);
 
-		formLayout.setResponsiveSteps(new ResponsiveStep("0", 1, LabelsPosition.TOP), new ResponsiveStep("600px", 1, LabelsPosition.ASIDE));
+		formLayout.setResponsiveSteps(new ResponsiveStep("0px", 1, LabelsPosition.ASIDE));
 
+	}
+
+	private void setBuyerDetailFormItem(int invoiceType) {
+
+		FormItem vehicleNumberFormItem = buyerDetailFormComponent.getVehicleNumberFormItem();
+		FormItem transporterNameFormItem = buyerDetailFormComponent.getTransporterNameFormItem();
+		FormItem invoiceDateFormItem = buyerDetailFormComponent.getInvoiceDateFormItem();
+
+		if (invoiceType == 1 || invoiceType == 5 || invoiceType == 6) {
+			vehicleNumberFormItem.setVisible(true);
+			transporterNameFormItem.setVisible(true);
+			invoiceDateFormItem.setVisible(false);
+
+		} else if (invoiceType == 2 || invoiceType == 4 || invoiceType == 7 || invoiceType == 8) {
+			vehicleNumberFormItem.setVisible(false);
+			transporterNameFormItem.setVisible(false);
+			invoiceDateFormItem.setVisible(false);
+
+		} else if (invoiceType == 3) {
+			vehicleNumberFormItem.setVisible(false);
+			transporterNameFormItem.setVisible(false);
+			invoiceDateFormItem.setVisible(true);
+
+		}
+
+	}
+
+	private void setBuyerAddressValues(Buyer buyer) {
+
+		if (buyer != null) {
+			// set buyer address
+			buyerAddressComponent.getBuyerNameEle().setText(buyer.getAddress().getName());
+			buyerAddressComponent.getBuyerAddressEle().setText(buyer.getAddress().getAddressDetail());
+			buyerAddressComponent.getBuyerPincodeEle().setText(buyer.getAddress().getPincode());
+			buyerAddressComponent.getBuyerStateEle().setText(buyer.getAddress().getState().getName());
+			buyerAddressComponent.getBuyerCountryEle().setText(buyer.getAddress().getCountry().getName());
+			buyerAddressComponent.getBuyerGstinEle().setText(buyer.getAddress().getGstin());
+		} else {
+			// reset buyer address
+			buyerAddressComponent.getBuyerNameEle().setText(null);
+			buyerAddressComponent.getBuyerAddressEle().setText(null);
+			buyerAddressComponent.getBuyerPincodeEle().setText(null);
+			buyerAddressComponent.getBuyerStateEle().setText(null);
+			buyerAddressComponent.getBuyerCountryEle().setText(null);
+			buyerAddressComponent.getBuyerGstinEle().setText(null);
+		}
 	}
 
 	private void setInvoiceItems() {
@@ -287,14 +290,11 @@ public class InvoiceEntryView extends VerticalLayout {
 
 		quantityEle.addValueChangeListener(quantiyListener -> {
 			// To avoid recursion
-			if ("ProgramaticallyChanged".equals(quantityEle.getTitle())) {
-				quantityEle.setTitle(null);
+			if (!quantiyListener.isFromClient())
 				return;
-			}
 			Double quantity = quantiyListener.getValue();
 			generateBill(quantity.intValue(), invoiceItem);
 			itemGrid.getDataProvider().refreshItem(invoiceItem);
-			quantityEle.setTitle("ProgramaticallyChanged");
 			quantityEle.setValue(quantity);
 		});
 
@@ -320,15 +320,83 @@ public class InvoiceEntryView extends VerticalLayout {
 	}
 
 	private void processForm() {
+
+		Invoice invoice = new Invoice();
+
 		Seller seller = sellerEle.getValue();
+		if (seller == null) {
+			add(new InvoiceDialog("Validation Fail", "Please Select Seller"));
+			return;
+		}
 
 		String invoiceTypeStr = invoiceTypeEle.getValue();
 		int invoiceType = InvoiceUtils.invoiceTypeInt(invoiceTypeStr);
+		if (invoiceType == 0) {
+			add(new InvoiceDialog("Validation Fail", "Please Select InvoiceType"));
+			return;
+		}
 
-		Buyer buyer = buyerEle.getValue();
+		Buyer buyer = buyerDetailFormComponent.getBuyerEle().getValue();
+		if (buyer == null) {
+			add(new InvoiceDialog("Validation Fail", "Please Select Buyer"));
+			return;
+		}
 
-//		String vehicleNumber;
-//		String transporterName;
+		String remarks = buyerDetailFormComponent.getRemarksEle().getValue();
+		String vehicleNumber = "";
+		String transporterName = "";
+		LocalDateTime invoiceDate = LocalDateTime.now();
+
+		TextField vehicleNumberEle = buyerDetailFormComponent.getVehicleNumberEle();
+		TextField transporterNameEle = buyerDetailFormComponent.getTransporterNameEle();
+		DatePicker invoiceDateEle = buyerDetailFormComponent.getInvoiceDateEle();
+
+		if (invoiceType == 1 || invoiceType == 5 || invoiceType == 6) {
+			vehicleNumber = vehicleNumberEle.getValue();
+			transporterName = transporterNameEle.getValue();
+
+		} else if (invoiceType == 2 || invoiceType == 4 || invoiceType == 7 || invoiceType == 8) {
+			// Buyer and Remarks (value already stored)
+
+		} else if (invoiceType == 3) {
+			if (invoiceDateEle.getValue() != null)
+				invoiceDate = invoiceDateEle.getValue().atTime(LocalTime.now());
+		}
+
+		if (invoiceType == 4) {
+
+			String currency = exportFormComponent.getCurrencyEle().getValue();
+			if (currency == null) {
+				add(new InvoiceDialog("Validation Fail", "Please select currency"));
+				return;
+			}
+
+			Double exchangeRate = exportFormComponent.getExchangeRateEle().getValue();
+			if (exchangeRate == null) {
+				add(new InvoiceDialog("Validation Fail", "Please select exchange rate"));
+				return;
+			}
+
+			Port port = exportFormComponent.getPortCodeEle().getValue();
+			if (port == null) {
+				add(new InvoiceDialog("Validation Fail", "Please select port code"));
+				return;
+			}
+
+			String igstTypeStr = exportFormComponent.getIgstTypeEle().getValue();
+			int igstType = InvoiceUtils.getIgstType(igstTypeStr);
+			if (igstType == 0) {
+				add(new InvoiceDialog("Validation Fail", "Please select igst type"));
+				return;
+			}
+
+			export = new Export();
+			export.setCurrency(currency);
+			export.setExchangeRate(exchangeRate.intValue());
+			export.setPort(port);
+			export.setIgstType(igstType);
+			export.setInvoice(invoice);
+		}
 
 		List<InvoiceItem> invoiceItems = this.items;
 
@@ -339,7 +407,11 @@ public class InvoiceEntryView extends VerticalLayout {
 		double invoiceIgstAmount = 0;
 		double invoiceTotalAmount = 0;
 
+		// calculate invoice total Quantity and (Net/CGST/SGST/IGST/Total)amount
 		for (InvoiceItem invoiceItem : invoiceItems) {
+
+			invoiceItem.setInvoice(invoice);
+
 			invoiceItemQuantity += invoiceItem.getQuantity();
 			invoiceNetAmount += invoiceItem.getNetAmount();
 
@@ -361,9 +433,12 @@ public class InvoiceEntryView extends VerticalLayout {
 			invoiceTotalAmount += invoiceItem.getTotalAmount();
 		}
 
-		Invoice invoice = new Invoice();
+		if (invoiceItemQuantity <= 0) {
+			add(new InvoiceDialog("Validation Fail", "Please select atleast one Item"));
+			return;
+		}
 
-		invoice.setCreationDate(LocalDateTime.now());
+		invoice.setCreationDate(invoiceDate);
 		invoice.setType(invoiceType);
 		invoice.setSeller(seller);
 		invoice.setBuyer(buyer);
@@ -378,14 +453,27 @@ public class InvoiceEntryView extends VerticalLayout {
 			invoice.setTotalSgstAmount(invoiceSgstAmount);
 		}
 		invoice.setTotalAmount(invoiceTotalAmount);
+		invoice.setVehicleNumber(vehicleNumber);
+		invoice.setTransporterName(transporterName);
 		invoice.setInvoiceNumber(invoiceSeriesService.generateInvoiceNumber(invoice));
 		invoice.setInvoiceItems(invoiceItems);
+
+		invoice.setExport(export);
+		invoice.setRemarks(remarks);
 
 		InvoiceBuilder invoiceBuilder = InvoiceBuilderFactory.getInvoiceBuilder(invoice);
 		byte[] invoicePdfData = invoiceBuilder.createInvoicePdf();
 		invoice.setInvoicePdf(new InvoicePdf(invoicePdfData, invoice));
 
 		System.out.println(invoice);
+		invoiceService.save(invoice);
+
+		add(new InvoiceDialog("Success", "Invoice created " + invoice.getInvoiceNumber()));
+		reset();
+	}
+
+	// TODO: implement InvoiceEntry form reset logic
+	private void reset() {
 	}
 
 }

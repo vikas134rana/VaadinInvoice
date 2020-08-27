@@ -2,7 +2,7 @@ package com.vikas.vaadindemo.entity.enums;
 
 public enum InvoiceStatus {
 
-	ACTIVE(100), CANCELLED(200);
+	ACTIVE(100), CANCELED(200);
 	
 	private int statusCode;
 	
@@ -14,7 +14,7 @@ public enum InvoiceStatus {
 		if(statusCode == 100)
 			return ACTIVE;
 		if(statusCode == 200)
-			return CANCELLED;
+			return CANCELED;
 		return null;
 	}
 	

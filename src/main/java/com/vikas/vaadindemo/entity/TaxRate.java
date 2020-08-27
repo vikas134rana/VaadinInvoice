@@ -17,21 +17,17 @@ public class TaxRate {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private int id;
-	
+
 	@ManyToOne
 	@JoinColumn(name = "category_id")
 	private Category category;
-	
+
 	@Column
 	private double cgstRate;
-	
+
 	@Column
 	private double sgstRate;
-	
-	@ManyToOne
-	@JoinColumn(name = "seller_id")
-	private Seller seller;
-	
+
 	@Column
 	private LocalDateTime startDate;
 
@@ -70,14 +66,6 @@ public class TaxRate {
 		this.sgstRate = sgstRate;
 	}
 
-	public Seller getSeller() {
-		return seller;
-	}
-
-	public void setSeller(Seller seller) {
-		this.seller = seller;
-	}
-
 	public LocalDateTime getStartDate() {
 		return startDate;
 	}
@@ -88,8 +76,7 @@ public class TaxRate {
 
 	@Override
 	public String toString() {
-		return "TaxRate [id=" + id + ", category=" + category + ", cgstRate=" + cgstRate + ", sgstRate=" + sgstRate + ", seller=" + seller + ", startDate="
-				+ startDate + "]";
+		return "TaxRate [id=" + id + ", category=" + category + ", cgstRate=" + cgstRate + ", sgstRate=" + sgstRate + ", startDate=" + startDate + "]";
 	}
 
 }

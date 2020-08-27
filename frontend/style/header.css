@@ -1,0 +1,22 @@
+.header {
+	margin: 0px;
+}
+
+.header-menu {
+	padding: 5px 10px 5px 10px;
+	background: #343A40;
+}
+
+.header-menuitem:hover {
+	background: #4b4b4b;
+	color: white;
+}
+
+.header-menuitem {
+	color: #D3D3D3;
+}
+
+.header-logo {
+	color: white;
+	font-size: 20px;
+}

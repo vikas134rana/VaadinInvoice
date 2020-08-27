@@ -1,4 +1,4 @@
-package com.vikas.vaadindemo.ui;
+package com.vikas.vaadindemo.ui.salesregister;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -16,8 +16,12 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.formlayout.FormLayout.ResponsiveStep;
+import com.vaadin.flow.component.formlayout.FormLayout.ResponsiveStep.LabelsPosition;
 import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.page.Page;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.server.StreamResource;
@@ -33,10 +37,11 @@ import com.vikas.vaadindemo.service.BuyerService;
 import com.vikas.vaadindemo.service.InvoiceService;
 import com.vikas.vaadindemo.service.SellerService;
 import com.vikas.vaadindemo.util.InvoiceUtils;
+import com.vikas.vaadindemo.util.VaadinUtils;
 
 @UIScope
 @SpringComponent
-public class SalesRegisterView extends HorizontalLayout {
+public class SalesRegisterView extends VerticalLayout {
 
 	private static final long serialVersionUID = 1L;
 
@@ -82,7 +87,12 @@ public class SalesRegisterView extends HorizontalLayout {
 		endDateEle = new DatePicker(LocalDate.now());
 
 		excelEle = new Button("Download Excel");
+		excelEle.addClickListener(click -> downloadSalesRegister(SalesRegisterFormat.EXCEL));
+
 		pdfEle = new Button("Download PDF");
+		pdfEle.addClickListener(click -> downloadSalesRegister(SalesRegisterFormat.PDF));
+
+		VaadinUtils.setWidthFull(sellerEle, buyerEle, invoiceNumberEle, invoiceTypeEle, startDateEle, endDateEle);
 
 		hiddenDownloadButton = new Anchor();
 		hiddenDownloadButton.setId(downloadId);
@@ -96,21 +106,27 @@ public class SalesRegisterView extends HorizontalLayout {
 		formLayout.addFormItem(invoiceTypeEle, "Invoice Type");
 		formLayout.addFormItem(startDateEle, "Start Date");
 		formLayout.addFormItem(endDateEle, "End Date");
-		formLayout.add(excelEle);
-		formLayout.add(pdfEle);
 		formLayout.add(hiddenDownloadButton);
 
-		formLayout.setWidth("400px");
-		add(formLayout);
-		
-		excelEle.addClickListener(click -> {
-			downloadSalesRegister(SalesRegisterFormat.EXCEL);
-		});
+		formLayout.setWidthFull();
+		formLayout.setResponsiveSteps(new ResponsiveStep("0px", 1, LabelsPosition.ASIDE));
 
-		pdfEle.addClickListener(click -> {
-			downloadSalesRegister(SalesRegisterFormat.PDF);
-		});
+		HorizontalLayout buttonsLayout = new HorizontalLayout();
+		buttonsLayout.add(excelEle);
+		buttonsLayout.add(pdfEle);
+		buttonsLayout.getStyle().set("margin-top", "20px");
+		buttonsLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
+		formLayout.add(buttonsLayout);
 
+		HorizontalLayout horizontalLayout = new HorizontalLayout();
+		horizontalLayout.setWidth("450px");
+		horizontalLayout.add(formLayout);
+		horizontalLayout.getStyle().set("border", "1px solid black");
+		horizontalLayout.getStyle().set("border-radius", "10px");
+		horizontalLayout.getStyle().set("padding", "20px");
+
+		add(horizontalLayout);
+		setAlignItems(Alignment.CENTER);
 	}
 
 	private List<Invoice> getInvoicesUsingForm() {
